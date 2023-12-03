@@ -6,6 +6,7 @@ const cloudinary = require("cloudinary");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
+const nodemailer = require("nodemailer");
 const fileUpload = require("express-fileupload");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
@@ -167,4 +168,60 @@ app.use("/api/n1/space-events", async (req, res) => {
     res.status(500).json({ message: "error" });
   }
 });
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "nandish1729@gmail.com",
+    pass: "sdfsadfvcX@#dfgtrfds",
+  },
+});
+
+// Define email content
+const getEmailOptions = (to, subject, text) => ({
+  from: "nandish1729@gmail.com",
+  to,
+  subject,
+  text,
+});
+app.use("/api/n1/schedule-email", async (req, res) => {
+  try {
+    const { email, launchName, launchTime } = req.body;
+
+    // Set up launch time (replace this with your actual launch time)
+    const launchDateTime = new Date(launchTime);
+
+    // Schedule email reminder
+    const job = scheduleEmail(launchDateTime, email, launchName);
+
+    res.json({
+      success: true,
+      message: "Email Remainder successfully created",
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, err: "Cannot place the Email" });
+  }
+});
+
+const scheduleEmail = (launchDateTime, email, launchName) => {
+  const now = new Date();
+  const timeUntilLaunch = launchDateTime - now;
+
+  setTimeout(() => {
+    const mailOptions = getEmailOptions(
+      email,
+      "Space Launch Reminder",
+      `Reminder: The space launch "${launchName}" is scheduled!`
+    );
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error(error);
+      } else {
+        console.log(`Email sent: ${info.response}`);
+      }
+    });
+  }, timeUntilLaunch);
+};
+
 app.listen(5000, () => console.log("server running on 5000 port"));
